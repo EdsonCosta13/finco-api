@@ -1,0 +1,6 @@
+# Import controllers
+from app.controllers.company_controller import CompanyController
+from app.controllers.employee_controller import EmployeeController
+from app.controllers.credit_controller import CreditController
+from app.controllers.investment_controller import InvestmentController
+from app.controllers.invitation_controller import InvitationController
