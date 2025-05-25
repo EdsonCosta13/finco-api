@@ -1,5 +1,6 @@
 from app import db
 from app.models.invitation import CompanyInvitation, EmployeeInvitation
+from app.utils.email import send_invitation_email
 from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 import uuid
@@ -19,6 +20,8 @@ class InvitationService:
             ).first()
             
             if existing_invitation and existing_invitation.expires_at > datetime.utcnow():
+                # Send email with the existing invitation
+                send_invitation_email(existing_invitation, 'company')
                 return existing_invitation, None
             
             # Create new invitation
@@ -30,6 +33,10 @@ class InvitationService:
             
             db.session.add(invitation)
             db.session.commit()
+            
+            # Send email with the new invitation
+            send_invitation_email(invitation, 'company')
+            
             return invitation, None
             
         except IntegrityError as e:
@@ -70,6 +77,8 @@ class InvitationService:
             ).first()
             
             if existing_invitation and existing_invitation.expires_at > datetime.utcnow():
+                # Send email with the existing invitation
+                send_invitation_email(existing_invitation, 'employee')
                 return existing_invitation, None
             
             # Create new invitation
@@ -82,6 +91,10 @@ class InvitationService:
             
             db.session.add(invitation)
             db.session.commit()
+            
+            # Send email with the new invitation
+            send_invitation_email(invitation, 'employee')
+            
             return invitation, None
             
         except IntegrityError as e:

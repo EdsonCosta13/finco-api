@@ -16,10 +16,9 @@ class InvitationController:
         if error:
             return jsonify({"error": error}), 400
         
-        # Here you would typically send an email with the invitation code
-        # For now, we'll just return it in the response
+        # Email is sent within the service
         return jsonify({
-            "message": "Invitation created successfully",
+            "message": "Invitation created and email sent successfully",
             "invitation": invitation.to_dict()
         }), 201
     
@@ -38,10 +37,9 @@ class InvitationController:
         if error:
             return jsonify({"error": error}), 400
         
-        # Here you would typically send an email with the invitation code
-        # For now, we'll just return it in the response
+        # Email is sent within the service
         return jsonify({
-            "message": "Invitation created successfully",
+            "message": "Invitation created and email sent successfully",
             "invitation": invitation.to_dict()
         }), 201
     
