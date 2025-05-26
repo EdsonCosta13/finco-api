@@ -2,6 +2,7 @@ from flask import jsonify, request
 from app.services.credit_service import CreditService
 from app.models.credit_request import CreditRequestStatus
 from flask_jwt_extended import get_jwt
+import logging
 
 class CreditController:
     @staticmethod
@@ -79,22 +80,72 @@ class CreditController:
         return jsonify(credit_request.to_dict()), 201
     
     @staticmethod
-    def update_credit_status(credit_id):
-        data = request.get_json()
-        
-        if 'status' not in data:
-            return jsonify({"error": "Status field is required"}), 400
-        
-        # Validate status value
-        status = data['status']
-        valid_statuses = [s for s in dir(CreditRequestStatus) if not s.startswith('_')]
-        
-        if status not in valid_statuses:
-            return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
-        
-        credit_request, error = CreditService.update_credit_request_status(credit_id, status)
-        
-        if error:
-            return jsonify({"error": error}), 400
-        
-        return jsonify(credit_request.to_dict()), 200
+    def update_credit_status(credit_id, status):
+        """Atualiza o status de uma solicitação de crédito"""
+        try:
+            result = CreditService.update_credit_request_status(credit_id, status)
+            
+            if isinstance(result, tuple):
+                return jsonify({'message': result[1]}), 400
+                
+            return jsonify({
+                'message': f'Solicitação de crédito {status} com sucesso',
+                'credit_request': result.to_dict()
+            }), 200
+            
+        except Exception as e:
+            return jsonify({'message': f'Erro ao atualizar status: {str(e)}'}), 500
+
+    @staticmethod
+    def get_employee_credit_requests():
+        """Lista as solicitações de crédito do funcionário"""
+        try:
+            jwt = get_jwt()
+            employee_id = jwt.get('employee_id')
+            
+            if not employee_id:
+                return jsonify({'message': 'ID do funcionário não encontrado no token'}), 401
+            
+            # Buscar solicitações do funcionário
+            requests = CreditService.get_credit_requests_by_employee(employee_id)
+            logging.info(f"Solicitações encontradas para o funcionário {employee_id}: {len(requests)}")
+            
+            # Converter para dicionário
+            requests_dict = [req.to_dict() for req in requests]
+            logging.info(f"Dados das solicitações: {requests_dict}")
+            
+            return jsonify({
+                'message': 'Solicitações encontradas',
+                'credit_requests': requests_dict,
+                'total': len(requests)
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações: {str(e)}")
+            return jsonify({'message': f'Erro ao buscar solicitações: {str(e)}'}), 500
+
+    @staticmethod
+    def get_pending_credit_requests():
+        """Lista todas as solicitações de crédito pendentes"""
+        try:
+            # Buscar todas as solicitações
+            all_requests = CreditService.get_all_credit_requests()
+            logging.info(f"Total de solicitações encontradas: {len(all_requests)}")
+            
+            # Filtrar apenas as pendentes
+            pending_requests = [req for req in all_requests if req.status == CreditRequestStatus.PENDING]
+            logging.info(f"Solicitações pendentes: {len(pending_requests)}")
+            
+            # Converter para dicionário
+            requests_dict = [req.to_dict() for req in pending_requests]
+            logging.info(f"Dados das solicitações: {requests_dict}")
+            
+            return jsonify({
+                'message': 'Solicitações pendentes encontradas',
+                'credit_requests': requests_dict,
+                'total': len(pending_requests)
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações: {str(e)}")
+            return jsonify({'message': f'Erro ao buscar solicitações: {str(e)}'}), 500

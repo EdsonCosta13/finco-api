@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+import logging
 
 class CreditRequestStatus:
     PENDING = 'pending'
@@ -23,18 +24,33 @@ class CreditRequest(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
+    employee = db.relationship('Employee', backref=db.backref('credit_requests', lazy=True, cascade="all, delete-orphan"))
     investments = db.relationship('Investment', backref='credit_request', lazy=True)
     
+    def __init__(self, employee_id, amount, term_months, purpose, interest_rate, status=CreditRequestStatus.PENDING):
+        self.employee_id = employee_id
+        self.amount = amount
+        self.term_months = term_months
+        self.purpose = purpose
+        self.interest_rate = interest_rate
+        self.status = status
+    
     def to_dict(self):
-        return {
-            'id': self.id,
-            'amount': self.amount,
-            'interest_rate': self.interest_rate,
-            'term_months': self.term_months,
-            'purpose': self.purpose,
-            'status': self.status,
-            'employee_id': self.employee_id,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat(),
-            'funded_amount': sum(investment.amount for investment in self.investments)
-        }
+        try:
+            return {
+                'id': self.id,
+                'amount': self.amount,
+                'interest_rate': self.interest_rate,
+                'term_months': self.term_months,
+                'purpose': self.purpose,
+                'status': self.status,
+                'employee_id': self.employee_id,
+                'employee_name': self.employee.name if self.employee else None,
+                'company_name': self.employee.company.name if self.employee and self.employee.company else None,
+                'created_at': self.created_at.isoformat() if self.created_at else None,
+                'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+                'funded_amount': sum(investment.amount for investment in self.investments)
+            }
+        except Exception as e:
+            logging.error(f"Erro ao converter solicitação para dicionário: {str(e)}")
+            raise

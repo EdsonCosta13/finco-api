@@ -3,6 +3,7 @@ from app.models.credit_request import CreditRequest, CreditRequestStatus
 from app.models.employee import Employee
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+import logging
 
 class CreditService:
     # Constantes para validação
@@ -15,15 +16,36 @@ class CreditService:
 
     @staticmethod
     def get_all_credit_requests():
-        return CreditRequest.query.all()
+        """Retorna todas as solicitações de crédito"""
+        try:
+            requests = CreditRequest.query.all()
+            logging.info(f"Buscando todas as solicitações de crédito. Total encontrado: {len(requests)}")
+            return requests
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações: {str(e)}")
+            raise
     
     @staticmethod
     def get_credit_requests_by_employee(employee_id):
-        return CreditRequest.query.filter_by(employee_id=employee_id).all()
+        """Retorna todas as solicitações de crédito de um funcionário"""
+        try:
+            requests = CreditRequest.query.filter_by(employee_id=employee_id).all()
+            logging.info(f"Buscando solicitações do funcionário {employee_id}. Total encontrado: {len(requests)}")
+            return requests
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações do funcionário: {str(e)}")
+            raise
     
     @staticmethod
     def get_credit_request_by_id(credit_id):
-        return CreditRequest.query.get(credit_id)
+        """Retorna uma solicitação de crédito específica"""
+        try:
+            request = CreditRequest.query.get(credit_id)
+            logging.info(f"Buscando solicitação {credit_id}. Encontrada: {request is not None}")
+            return request
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitação: {str(e)}")
+            raise
     
     @staticmethod
     def create_employee_credit_request(employee_id, amount, term_months, purpose):

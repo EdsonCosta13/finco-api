@@ -18,7 +18,6 @@ class Employee(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    credit_requests = db.relationship('CreditRequest', backref='employee', lazy=True, cascade="all, delete-orphan")
     investments = db.relationship('Investment', backref='employee', lazy=True, cascade="all, delete-orphan")
     
     @property

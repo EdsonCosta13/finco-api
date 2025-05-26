@@ -1,5 +1,7 @@
 from flask import jsonify, request
 from app.services.investment_service import InvestmentService
+from app.models.credit_request import CreditRequestStatus
+from flask_jwt_extended import get_jwt
 
 class InvestmentController:
     @staticmethod
@@ -25,17 +27,55 @@ class InvestmentController:
         return jsonify(investment.to_dict()), 200
     
     @staticmethod
+    def list_investment_opportunities():
+        try:
+            # Get all pending credit requests that are available for investment
+            opportunities = InvestmentService.get_available_opportunities()
+            
+            return jsonify({
+                'message': 'Oportunidades de investimento encontradas',
+                'opportunities': opportunities
+            }), 200
+            
+        except Exception as e:
+            return jsonify({'message': f'Erro ao buscar oportunidades: {str(e)}'}), 500
+    
+    @staticmethod
     def create_investment():
-        data = request.get_json()
-        
-        # Basic validation
-        required_fields = ['amount', 'employee_id', 'credit_request_id']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-        
-        investment, error = InvestmentService.create_investment(data)
-        if error:
-            return jsonify({"error": error}), 400
-        
-        return jsonify(investment.to_dict()), 201
+        try:
+            data = request.get_json()
+            jwt = get_jwt()
+            
+            if not data:
+                return jsonify({'message': 'Dados não fornecidos'}), 400
+            
+            # Validate required fields
+            required_fields = ['credit_request_id', 'amount']
+            for field in required_fields:
+                if field not in data:
+                    return jsonify({'message': f'O campo {field} é obrigatório'}), 400
+            
+            # Get investor_id from JWT claims
+            investor_id = jwt.get('user_id')
+            if not investor_id:
+                return jsonify({'message': 'ID do investidor não encontrado no token'}), 401
+            
+            # Create investment
+            result = InvestmentService.create_investment(
+                investor_id=investor_id,
+                credit_request_id=data['credit_request_id'],
+                amount=float(data['amount'])
+            )
+            
+            if isinstance(result, tuple):
+                return jsonify({'message': result[0]}), result[1]
+            
+            return jsonify({
+                'message': 'Investimento realizado com sucesso',
+                'investment': result
+            }), 201
+            
+        except ValueError as e:
+            return jsonify({'message': str(e)}), 400
+        except Exception as e:
+            return jsonify({'message': f'Erro ao realizar investimento: {str(e)}'}), 500

@@ -23,4 +23,35 @@ credit_bp.route('/employee/<int:employee_id>', methods=['GET'])(CreditController
 @jwt_required()
 @User.employee_required
 def create_employee_credit_request():
+    """Cria uma nova solicitação de crédito"""
     return CreditController.create_employee_credit_request()
+
+# Rotas para gerentes
+@credit_bp.route('/manager/approve/<int:credit_id>', methods=['POST'])
+@jwt_required()
+@User.manager_required
+def approve_credit_request(credit_id):
+    """Aprova uma solicitação de crédito"""
+    return CreditController.update_credit_status(credit_id, 'approved')
+
+@credit_bp.route('/manager/reject/<int:credit_id>', methods=['POST'])
+@jwt_required()
+@User.manager_required
+def reject_credit_request(credit_id):
+    """Rejeita uma solicitação de crédito"""
+    return CreditController.update_credit_status(credit_id, 'rejected')
+
+# Rotas para visualização
+@credit_bp.route('/employee/requests', methods=['GET'])
+@jwt_required()
+@User.employee_required
+def get_employee_requests():
+    """Lista as solicitações de crédito do funcionário"""
+    return CreditController.get_employee_credit_requests()
+
+@credit_bp.route('/manager/pending', methods=['GET'])
+@jwt_required()
+@User.manager_required
+def get_pending_requests():
+    """Lista as solicitações de crédito pendentes"""
+    return CreditController.get_pending_credit_requests()

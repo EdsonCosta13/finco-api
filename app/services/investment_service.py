@@ -3,6 +3,8 @@ from app.models.investment import Investment
 from app.models.employee import Employee
 from app.models.credit_request import CreditRequest, CreditRequestStatus
 from app.services.credit_service import CreditService
+from app.models.user import User
+from datetime import datetime
 
 class InvestmentService:
     # Minimum investment amount
@@ -25,51 +27,85 @@ class InvestmentService:
         return Investment.query.get(investment_id)
     
     @staticmethod
-    def create_investment(data):
-        # Validate employee
-        employee = Employee.query.get(data.get('employee_id'))
-        if not employee:
-            return None, "Employee not found"
-        
-        # Validate credit request
-        credit_request = CreditRequest.query.get(data.get('credit_request_id'))
-        if not credit_request:
-            return None, "Credit request not found"
-        
-        # Validate credit request status
-        if credit_request.status != CreditRequestStatus.APPROVED:
-            return None, "Cannot invest in a credit request that is not approved"
-        
-        # Validate investment amount
-        amount = data.get('amount')
-        if amount < InvestmentService.MIN_INVESTMENT_AMOUNT:
-            return None, f"Investment amount must be at least {InvestmentService.MIN_INVESTMENT_AMOUNT}"
-        
-        # Check if employee is trying to invest in their own credit request
-        if employee.id == credit_request.employee_id:
-            return None, "Cannot invest in your own credit request"
-        
-        # Check if investment would exceed required amount
-        current_funding = CreditService.get_funded_amount(credit_request.id)
-        remaining = credit_request.amount - current_funding
-        
-        if amount > remaining:
-            return None, f"Investment would exceed required amount. Maximum: {remaining}"
-        
+    def get_available_opportunities():
+        """Retorna todas as solicitações de crédito disponíveis para investimento"""
         try:
+            # Buscar solicitações aprovadas que ainda não foram totalmente financiadas
+            opportunities = CreditRequest.query.filter(
+                CreditRequest.status == CreditRequestStatus.APPROVED
+            ).all()
+            
+            result = []
+            for opp in opportunities:
+                # Calcular quanto já foi investido
+                invested_amount = sum(inv.amount for inv in opp.investments)
+                remaining_amount = opp.amount - invested_amount
+                
+                if remaining_amount > 0:
+                    result.append({
+                        'id': opp.id,
+                        'employee_name': opp.employee.name,
+                        'company_name': opp.employee.company.name,
+                        'amount': opp.amount,
+                        'remaining_amount': remaining_amount,
+                        'term_months': opp.term_months,
+                        'interest_rate': opp.interest_rate,
+                        'purpose': opp.purpose,
+                        'created_at': opp.created_at.isoformat()
+                    })
+            
+            return result
+            
+        except Exception as e:
+            raise Exception(f'Erro ao buscar oportunidades: {str(e)}')
+    
+    @staticmethod
+    def create_investment(investor_id, credit_request_id, amount):
+        """Cria um novo investimento"""
+        try:
+            # Verificar se o investidor existe
+            investor = User.query.get(investor_id)
+            if not investor:
+                return 'Investidor não encontrado', 404
+            
+            # Verificar se a solicitação de crédito existe e está aprovada
+            credit_request = CreditRequest.query.get(credit_request_id)
+            if not credit_request:
+                return 'Solicitação de crédito não encontrada', 404
+            
+            if credit_request.status != CreditRequestStatus.APPROVED:
+                return 'A solicitação de crédito não está disponível para investimento', 400
+            
+            # Calcular quanto já foi investido
+            invested_amount = sum(inv.amount for inv in credit_request.investments)
+            remaining_amount = credit_request.amount - invested_amount
+            
+            # Validar o valor do investimento
+            if amount <= 0:
+                return 'O valor do investimento deve ser maior que zero', 400
+            
+            if amount > remaining_amount:
+                return f'O valor máximo disponível para investimento é R$ {remaining_amount:.2f}', 400
+            
+            # Criar o investimento
             investment = Investment(
+                investor_id=investor_id,
+                credit_request_id=credit_request_id,
                 amount=amount,
-                employee_id=employee.id,
-                credit_request_id=credit_request.id
+                created_at=datetime.utcnow()
             )
             
             db.session.add(investment)
             db.session.commit()
             
-            # Check if credit is now fully funded
-            CreditService.check_fully_funded(credit_request)
+            # Verificar se a solicitação foi totalmente financiada
+            new_invested_amount = invested_amount + amount
+            if new_invested_amount >= credit_request.amount:
+                credit_request.status = CreditRequestStatus.FUNDED
+                db.session.commit()
             
-            return investment, None
+            return investment.to_dict()
+            
         except Exception as e:
             db.session.rollback()
-            return None, str(e)
+            return f'Erro ao criar investimento: {str(e)}', 500
