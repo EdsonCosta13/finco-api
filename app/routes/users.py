@@ -29,7 +29,7 @@ def get_users():
     
     return jsonify({
         'users': [u.to_dict() for u in users]
-    }), 200
+    }, 200)
 
 # Get a specific user
 @users_bp.route('/<int:user_id>', methods=['GET'])
@@ -168,7 +168,7 @@ def invite_employee():
     existing_invitation = EmployeeInvitation.query.filter_by(
         email=data['email'],
         company_id=user.company_id,
-        status='pending'
+        is_used=False
     ).first()
     
     if existing_invitation:

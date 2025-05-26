@@ -39,26 +39,33 @@ def login():
 @auth_bp.route('/signup/company', methods=['POST'])
 def company_signup():
     data = request.get_json()
-    
-    # Validate required fields
-    required_fields = ['name', 'email', 'password', 'nif', 'invitation_code']
+
+    # Validação dos campos principais
+    required_fields = ['name', 'email', 'nif', 'invitation_code', 'manager']
     for field in required_fields:
         if field not in data:
             return jsonify({'message': f'O campo {field} é obrigatório'}), 400
-    
+
+    # Validação dos campos do gerente
+    manager_data = data['manager']
+    required_manager_fields = ['name', 'email', 'password']
+    for field in required_manager_fields:
+        if field not in manager_data:
+            return jsonify({'message': f'O campo {field} do gerente é obrigatório'}), 400
+
     # Verify invitation code
     invitation = CompanyInvitation.query.filter_by(
         invitation_code=data['invitation_code'],
         email=data['email'],
-        status='pending'
+        is_used=False
     ).first()
-    
+
     if not invitation:
         return jsonify({'message': 'Código de convite inválido ou expirado'}), 400
         
     if invitation.expires_at < datetime.datetime.utcnow():
         return jsonify({'message': 'Código de convite expirado'}), 400
-    
+
     # Create company
     company = Company(
         name=data['name'],
@@ -67,42 +74,42 @@ def company_signup():
         address=data.get('address', ''),
         phone=data.get('phone', '')
     )
-    
+
     # Create manager user
     user = User(
-        name=data.get('user_name', data['name']),
-        email=data['email'],
-        password=data['password'],
+        name=manager_data['name'],
+        email=manager_data['email'],
+        password=manager_data['password'],
         role='manager',
         is_admin=False
     )
-    
+
     try:
         db.session.add(company)
         db.session.flush()  # Get company ID without committing
-        
+
         user.company_id = company.id
         db.session.add(user)
-        
+
         # Update invitation status
-        invitation.status = 'accepted'
+        invitation.is_used = True
         invitation.company_id = company.id
-        
+
         db.session.commit()
-        
+
         # Generate token
         access_token = create_access_token(
             identity={'user_id': user.id, 'role': user.role, 'company_id': user.company_id},
             expires_delta=timedelta(hours=24)
         )
-        
+
         return jsonify({
             'message': 'Registro realizado com sucesso',
             'access_token': access_token,
             'user': user.to_dict(),
             'company': company.to_dict()
         }), 201
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Erro ao registrar: {str(e)}'}), 500
@@ -121,7 +128,7 @@ def employee_signup():
     invitation = EmployeeInvitation.query.filter_by(
         invitation_code=data['invitation_code'],
         email=data['email'],
-        status='pending'
+        is_used=False
     ).first()
     
     if not invitation:
@@ -144,7 +151,7 @@ def employee_signup():
         db.session.add(user)
         
         # Update invitation status
-        invitation.status = 'accepted'
+        invitation.is_used = True
         invitation.user_id = user.id
         
         db.session.commit()

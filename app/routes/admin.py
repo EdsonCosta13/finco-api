@@ -60,7 +60,7 @@ def invite_company():
     # Check if invitation already exists
     existing_invitation = CompanyInvitation.query.filter_by(
         email=data['email'],
-        status='pending'
+        is_used=False
     ).first()
     
     if existing_invitation:

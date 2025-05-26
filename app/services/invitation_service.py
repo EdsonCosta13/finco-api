@@ -16,7 +16,7 @@ class InvitationService:
             # Check if an active invitation already exists
             existing_invitation = CompanyInvitation.query.filter_by(
                 email=email, 
-                is_used=False
+                is_used=False,
             ).first()
             
             if existing_invitation and existing_invitation.expires_at > datetime.utcnow():
@@ -28,7 +28,7 @@ class InvitationService:
             invitation = CompanyInvitation(
                 email=email,
                 invitation_code=str(uuid.uuid4()),
-                expires_at=datetime.utcnow() + timedelta(days=InvitationService.INVITATION_EXPIRY_DAYS)
+                expires_at=datetime.utcnow() + timedelta(days=InvitationService.INVITATION_EXPIRY_DAYS),
             )
             
             db.session.add(invitation)
@@ -51,10 +51,11 @@ class InvitationService:
         if not invitation:
             return False, "Invalid invitation code"
         
-        if invitation.is_used:
+        if invitation.is_used :
             return False, "Invitation has already been used"
         
         if invitation.expires_at < datetime.utcnow():
+            db.session.commit()
             return False, "Invitation has expired"
         
         return True, invitation
@@ -73,7 +74,7 @@ class InvitationService:
             existing_invitation = EmployeeInvitation.query.filter_by(
                 email=email, 
                 is_used=False,
-                company_id=company_id
+                company_id=company_id,
             ).first()
             
             if existing_invitation and existing_invitation.expires_at > datetime.utcnow():
@@ -86,7 +87,7 @@ class InvitationService:
                 email=email,
                 company_id=company_id,
                 invitation_code=str(uuid.uuid4()),
-                expires_at=datetime.utcnow() + timedelta(days=InvitationService.INVITATION_EXPIRY_DAYS)
+                expires_at=datetime.utcnow() + timedelta(days=InvitationService.INVITATION_EXPIRY_DAYS),
             )
             
             db.session.add(invitation)
@@ -113,6 +114,7 @@ class InvitationService:
             return False, "Invitation has already been used"
         
         if invitation.expires_at < datetime.utcnow():
+            db.session.commit()
             return False, "Invitation has expired"
         
         return True, invitation
