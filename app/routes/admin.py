@@ -5,6 +5,7 @@ from app.models.invitation import CompanyInvitation
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 import uuid
+from app.services.invitation_service import InvitationService
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -57,42 +58,16 @@ def invite_company():
     if not data or not data.get('email'):
         return jsonify({'message': 'Email é obrigatório'}), 400
     
-    # Check if invitation already exists
-    existing_invitation = CompanyInvitation.query.filter_by(
-        email=data['email'],
-        is_used=False
-    ).first()
-    
-    if existing_invitation:
-        return jsonify({'message': 'Já existe um convite pendente para este email'}), 400
-    
-    # Create new invitation
-    expires_at = datetime.utcnow() + timedelta(days=7)
-    invitation_code = str(uuid.uuid4())
-    
-    invitation = CompanyInvitation(
-        email=data['email'],
-        invitation_code=invitation_code,
-        expires_at=expires_at,
+    # Create invitation using the service
+    invitation, error = InvitationService.create_company_invitation(
+        email=data['email'], 
         created_by=user.id
     )
     
-    try:
-        db.session.add(invitation)
-        db.session.commit()
+    if error:
+        return jsonify({'message': f'Erro ao enviar convite: {error}'}), 500
         
-        # Send email with invitation (implement email sending)
-        # send_invitation_email(data['email'], invitation_code)
-        
-        return jsonify({
-            'message': 'Convite enviado com sucesso',
-            'invitation': {
-                'email': invitation.email,
-                'invitation_code': invitation.invitation_code,
-                'expires_at': invitation.expires_at.isoformat()
-            }
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'message': f'Erro ao enviar convite: {str(e)}'}), 500
+    return jsonify({
+        'message': 'Convite enviado com sucesso',
+        'invitation': invitation.to_dict()
+    }), 201
