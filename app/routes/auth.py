@@ -13,6 +13,7 @@ from app.models.invitation import InvitationStatus
 
 auth_bp = Blueprint('auth', __name__)
 
+# Endpoints de autenticação geral
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -40,6 +41,124 @@ def login():
         'user': user.to_dict()
     }), 200
 
+# Endpoints específicos para funcionários
+@auth_bp.route('/employee/login', methods=['POST'])
+def employee_login():
+    data = request.get_json()
+    
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({'message': 'Email e senha são obrigatórios'}), 400
+        
+    user = User.query.filter_by(email=data['email']).first()
+    
+    if not user or not user.check_password(data['password']):
+        return jsonify({'message': 'Email ou senha inválidos'}), 401
+        
+    if not user.is_active:
+        return jsonify({'message': 'Conta desativada. Entre em contato com o administrador.'}), 401
+    
+    if not user.is_employee():
+        return jsonify({'message': 'Acesso permitido apenas para funcionários'}), 403
+    
+    # Get employee details
+    employee = Employee.query.filter_by(email=user.email).first()
+    if not employee:
+        return jsonify({'message': 'Dados do funcionário não encontrados'}), 404
+    
+    # Generate token
+    access_token = create_access_token(
+        identity={
+            'user_id': user.id,
+            'employee_id': employee.id,
+            'role': user.role,
+            'company_id': user.company_id
+        },
+        expires_delta=timedelta(hours=24)
+    )
+    
+    return jsonify({
+        'message': 'Login realizado com sucesso',
+        'access_token': access_token,
+        'user': user.to_dict(),
+        'employee': employee.to_dict()
+    }), 200
+
+@auth_bp.route('/employee/verify', methods=['GET'])
+@jwt_required()
+@User.employee_required
+def verify_employee():
+    current_user = get_jwt_identity()
+    user = User.query.get(current_user['user_id'])
+    employee = Employee.query.filter_by(email=user.email).first()
+    
+    if not employee:
+        return jsonify({'message': 'Dados do funcionário não encontrados'}), 404
+    
+    return jsonify({
+        'message': 'Token válido',
+        'user': user.to_dict(),
+        'employee': employee.to_dict()
+    }), 200
+
+# Endpoints específicos para gerentes
+@auth_bp.route('/manager/login', methods=['POST'])
+def manager_login():
+    data = request.get_json()
+    
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({'message': 'Email e senha são obrigatórios'}), 400
+        
+    user = User.query.filter_by(email=data['email']).first()
+    
+    if not user or not user.check_password(data['password']):
+        return jsonify({'message': 'Email ou senha inválidos'}), 401
+        
+    if not user.is_active:
+        return jsonify({'message': 'Conta desativada. Entre em contato com o administrador.'}), 401
+    
+    if not user.is_manager():
+        return jsonify({'message': 'Acesso permitido apenas para gerentes'}), 403
+    
+    # Get company details
+    company = Company.query.get(user.company_id)
+    if not company:
+        return jsonify({'message': 'Dados da empresa não encontrados'}), 404
+    
+    # Generate token
+    access_token = create_access_token(
+        identity={
+            'user_id': user.id,
+            'role': user.role,
+            'company_id': user.company_id
+        },
+        expires_delta=timedelta(hours=24)
+    )
+    
+    return jsonify({
+        'message': 'Login realizado com sucesso',
+        'access_token': access_token,
+        'user': user.to_dict(),
+        'company': company.to_dict()
+    }), 200
+
+@auth_bp.route('/manager/verify', methods=['GET'])
+@jwt_required()
+@User.manager_required
+def verify_manager():
+    current_user = get_jwt_identity()
+    user = User.query.get(current_user['user_id'])
+    company = Company.query.get(user.company_id)
+    
+    if not company:
+        return jsonify({'message': 'Dados da empresa não encontrados'}), 404
+    
+    return jsonify({
+        'message': 'Token válido',
+        'user': user.to_dict(),
+        'company': company.to_dict()
+    }), 200
+
+# Endpoints de registro
 @auth_bp.route('/signup/company', methods=['POST'])
 def company_signup():
     data = request.get_json()

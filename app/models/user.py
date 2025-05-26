@@ -1,6 +1,9 @@
 from app import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from flask import jsonify
+from flask_jwt_extended import get_jwt_identity
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -44,3 +47,33 @@ class User(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+    def is_employee(self):
+        """Check if user is an employee"""
+        return self.role == 'employee' and self.is_active
+
+    def is_manager(self):
+        """Check if user is a manager"""
+        return self.role == 'manager' and self.is_active
+
+    @staticmethod
+    def employee_required(f):
+        """Decorator to require employee role"""
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            current_user = get_jwt_identity()
+            if not current_user or current_user.get('role') != 'employee':
+                return jsonify({'message': 'Acesso permitido apenas para funcionários'}), 403
+            return f(*args, **kwargs)
+        return decorated_function
+
+    @staticmethod
+    def manager_required(f):
+        """Decorator to require manager role"""
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            current_user = get_jwt_identity()
+            if not current_user or current_user.get('role') != 'manager':
+                return jsonify({'message': 'Acesso permitido apenas para gerentes'}), 403
+            return f(*args, **kwargs)
+        return decorated_function
