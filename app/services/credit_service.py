@@ -2,8 +2,17 @@ from app import db
 from app.models.credit_request import CreditRequest, CreditRequestStatus
 from app.models.employee import Employee
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 class CreditService:
+    # Constantes para validação
+    MIN_AMOUNT = 100.0
+    MAX_AMOUNT = 10000.0
+    MIN_TERM_MONTHS = 3
+    MAX_TERM_MONTHS = 36
+    MIN_INTEREST_RATE = 0.5
+    MAX_INTEREST_RATE = 5.0
+
     @staticmethod
     def get_all_credit_requests():
         return CreditRequest.query.all()
@@ -15,6 +24,79 @@ class CreditService:
     @staticmethod
     def get_credit_request_by_id(credit_id):
         return CreditRequest.query.get(credit_id)
+    
+    @staticmethod
+    def create_employee_credit_request(employee_id, amount, term_months, purpose):
+        try:
+            # Verificar se o funcionário existe
+            employee = Employee.query.get(employee_id)
+            if not employee:
+                return 'Funcionário não encontrado', 404
+
+            # Verificar se já existe uma solicitação pendente
+            pending_request = CreditRequest.query.filter_by(
+                employee_id=employee_id,
+                status=CreditRequestStatus.PENDING
+            ).first()
+            
+            if pending_request:
+                return 'Já existe uma solicitação de crédito pendente', 400
+
+            # Validar valores mínimos e máximos
+            if amount < 1000:
+                return 'O valor mínimo para solicitação é de R$ 1.000,00', 400
+            if amount > 50000:
+                return 'O valor máximo para solicitação é de R$ 50.000,00', 400
+            if term_months < 3:
+                return 'O prazo mínimo é de 3 meses', 400
+            if term_months > 60:
+                return 'O prazo máximo é de 60 meses', 400
+
+            # Calcular taxa de juros base
+            base_rate = 0.015  # 1.5% ao mês
+            if amount > 25000:
+                base_rate -= 0.002  # Redução de 0.2% para valores acima de R$ 25.000
+            if term_months > 24:
+                base_rate += 0.001  # Aumento de 0.1% para prazos acima de 24 meses
+
+            # Criar solicitação de crédito
+            credit_request = CreditRequest(
+                employee_id=employee_id,
+                amount=amount,
+                term_months=term_months,
+                purpose=purpose,
+                interest_rate=base_rate,
+                status=CreditRequestStatus.PENDING,
+                created_at=datetime.utcnow()
+            )
+
+            db.session.add(credit_request)
+            db.session.commit()
+
+            return credit_request.to_dict()
+
+        except Exception as e:
+            db.session.rollback()
+            return f'Erro ao criar solicitação de crédito: {str(e)}', 500
+    
+    @staticmethod
+    def calculate_interest_rate(amount, term_months):
+        """Calcula a taxa de juros baseada no valor e prazo"""
+        base_rate = CreditService.MIN_INTEREST_RATE
+        
+        # Ajuste baseado no valor
+        if amount > CreditService.MAX_AMOUNT * 0.7:
+            base_rate += 0.5
+        elif amount > CreditService.MAX_AMOUNT * 0.4:
+            base_rate += 0.3
+        
+        # Ajuste baseado no prazo
+        if term_months > CreditService.MAX_TERM_MONTHS * 0.7:
+            base_rate += 0.5
+        elif term_months > CreditService.MAX_TERM_MONTHS * 0.4:
+            base_rate += 0.3
+        
+        return min(base_rate, CreditService.MAX_INTEREST_RATE)
     
     @staticmethod
     def create_credit_request(data):

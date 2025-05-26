@@ -1,6 +1,7 @@
 from flask import jsonify, request
 from app.services.credit_service import CreditService
 from app.models.credit_request import CreditRequestStatus
+from flask_jwt_extended import get_jwt
 
 class CreditController:
     @staticmethod
@@ -19,6 +20,47 @@ class CreditController:
         if not credit:
             return jsonify({"error": "Credit request not found"}), 404
         return jsonify(credit.to_dict()), 200
+    
+    @staticmethod
+    def create_employee_credit_request():
+        try:
+            data = request.get_json()
+            jwt = get_jwt()
+            
+            if not data:
+                return jsonify({'message': 'Dados não fornecidos'}), 400
+                
+            # Get employee_id from JWT claims
+            employee_id = jwt.get('employee_id')
+            if not employee_id:
+                return jsonify({'message': 'ID do funcionário não encontrado no token'}), 401
+            
+            # Validate required fields
+            required_fields = ['amount', 'term_months', 'purpose']
+            for field in required_fields:
+                if field not in data:
+                    return jsonify({'message': f'O campo {field} é obrigatório'}), 400
+            
+            # Create credit request
+            result = CreditService.create_employee_credit_request(
+                employee_id=employee_id,
+                amount=float(data['amount']),
+                term_months=int(data['term_months']),
+                purpose=data['purpose']
+            )
+            
+            if isinstance(result, tuple):
+                return jsonify({'message': result[0]}), result[1]
+                
+            return jsonify({
+                'message': 'Solicitação de crédito criada com sucesso',
+                'credit_request': result
+            }), 201
+            
+        except ValueError as e:
+            return jsonify({'message': str(e)}), 400
+        except Exception as e:
+            return jsonify({'message': f'Erro ao criar solicitação de crédito: {str(e)}'}), 500
     
     @staticmethod
     def create_credit_request():

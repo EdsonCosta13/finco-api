@@ -1,5 +1,7 @@
 from flask import Blueprint
 from app.controllers.credit_controller import CreditController
+from app.models.user import User
+from flask_jwt_extended import jwt_required
 
 credit_bp = Blueprint('credit_bp', __name__)
 
@@ -15,3 +17,10 @@ credit_bp.route('/<int:credit_id>/status', methods=['PUT'])(CreditController.upd
 
 # Credit relationships
 credit_bp.route('/employee/<int:employee_id>', methods=['GET'])(CreditController.get_credit_requests_by_employee)
+
+# Employee credit request
+@credit_bp.route('/employee/request', methods=['POST'])
+@jwt_required()
+@User.employee_required
+def create_employee_credit_request():
+    return CreditController.create_employee_credit_request()

@@ -65,15 +65,14 @@ def employee_login():
     if not employee:
         return jsonify({'message': 'Dados do funcionário não encontrados'}), 404
     
-    # Generate token
+    # Generate token with user ID as identity and role in claims
     access_token = create_access_token(
-        identity={
-            'user_id': user.id,
+        identity=str(user.id),  # Convert to string to ensure it's a string
+        additional_claims={
+            'role': 'employee',
             'employee_id': employee.id,
-            'role': user.role,
             'company_id': user.company_id
-        },
-        expires_delta=timedelta(hours=24)
+        }
     )
     
     return jsonify({
