@@ -1,7 +1,9 @@
 from app import db
 from app.models.company import Company
+from app.models.user import User
 from app.services.invitation_service import InvitationService
 from sqlalchemy.exc import IntegrityError
+from werkzeug.security import generate_password_hash
 
 class CompanyService:
     @staticmethod
@@ -27,12 +29,28 @@ class CompanyService:
             return None, "Email does not match the invitation"
         
         try:
+            # Create manager user first
+            manager_data = data.get('manager', {})
+            if not manager_data:
+                return None, "Manager information is required"
+            
+            manager = User(
+                name=manager_data.get('name'),
+                email=manager_data.get('email'),
+                password=generate_password_hash(manager_data.get('password')),
+                role='manager'
+            )
+            db.session.add(manager)
+            db.session.flush()  # Get the manager ID without committing
+            
+            # Create company with manager
             company = Company(
                 name=data.get('name'),
-                cnpj=data.get('cnpj'),
+                nif=data.get('nif'),
                 address=data.get('address'),
                 phone=data.get('phone'),
-                email=data.get('email')
+                email=data.get('email'),
+                manager_id=manager.id
             )
             
             db.session.add(company)
@@ -44,8 +62,8 @@ class CompanyService:
             return company, None
         except IntegrityError as e:
             db.session.rollback()
-            if 'cnpj' in str(e.orig).lower():
-                return None, "CNPJ already exists"
+            if 'nif' in str(e.orig).lower():
+                return None, "nif already exists"
             elif 'email' in str(e.orig).lower():
                 return None, "Email already exists"
             return None, str(e)

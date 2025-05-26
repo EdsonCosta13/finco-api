@@ -41,7 +41,7 @@ def company_signup():
     data = request.get_json()
     
     # Validate required fields
-    required_fields = ['name', 'email', 'password', 'cnpj', 'invitation_code']
+    required_fields = ['name', 'email', 'password', 'nif', 'invitation_code']
     for field in required_fields:
         if field not in data:
             return jsonify({'message': f'O campo {field} é obrigatório'}), 400
@@ -62,7 +62,7 @@ def company_signup():
     # Create company
     company = Company(
         name=data['name'],
-        cnpj=data['cnpj'],
+        nif=data['nif'],
         email=data['email'],
         address=data.get('address', ''),
         phone=data.get('phone', '')

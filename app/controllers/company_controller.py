@@ -19,10 +19,20 @@ class CompanyController:
         data = request.get_json()
         
         # Basic validation
-        required_fields = ['name', 'cnpj', 'email']
+        required_fields = ['name', 'nif', 'email', 'invitation_code']
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Validate manager data
+        if 'manager' not in data:
+            return jsonify({"error": "Manager information is required"}), 400
+        
+        manager_data = data['manager']
+        required_manager_fields = ['name', 'email', 'password']
+        for field in required_manager_fields:
+            if field not in manager_data:
+                return jsonify({"error": f"Missing required manager field: {field}"}), 400
         
         company, error = CompanyService.create_company(data)
         if error:
