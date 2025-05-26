@@ -56,9 +56,23 @@ def company_signup():
     # Verify invitation code
     invitation = CompanyInvitation.query.filter_by(
         invitation_code=data['invitation_code'],
-        email=data['email'],
         is_used=False
     ).first()
+
+    if not invitation:
+        return jsonify({'message': 'Código de convite inválido ou expirado'}), 400
+
+    if invitation.expires_at < datetime.datetime.utcnow():
+        return jsonify({'message': 'Código de convite expirado'}), 400
+
+    # Checar se o email do convite é igual ao da empresa ou do gerente
+    invitation_email = invitation.email.lower().strip()
+    company_email = data.get('email', '').lower().strip()
+    manager_email = data['manager'].get('email', '').lower().strip()
+
+    if invitation_email != company_email and invitation_email != manager_email:
+        return jsonify({'message': 'O email não corresponde ao convite'}), 400
+
 
     if not invitation:
         return jsonify({'message': 'Código de convite inválido ou expirado'}), 400

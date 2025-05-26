@@ -24,9 +24,16 @@ class CompanyService:
         if not valid:
             return None, invitation_or_error
         
-        # Verify email matches invitation
-        if invitation_or_error.email != data.get('email'):
-            return None, "Email does not match the invitation"
+        # Get manager data
+        manager_data = data.get('manager', {})
+        
+        # Verify email matches invitation - check against both company and manager email
+        invitation_email = invitation_or_error.email.lower().strip()
+        company_email = data.get('email', '').lower().strip()
+        manager_email = manager_data.get('email', '').lower().strip()
+        
+        if invitation_email != company_email and invitation_email != manager_email:
+            return None, "O email não corresponde ao convite"
         
         try:
             # Create manager user first

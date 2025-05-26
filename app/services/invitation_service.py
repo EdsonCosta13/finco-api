@@ -52,6 +52,12 @@ class InvitationService:
     @staticmethod
     def validate_company_invitation(invitation_code):
         """Validate a company invitation code"""
+        if not invitation_code or not isinstance(invitation_code, str):
+            return False, "Invalid invitation code format"
+            
+        # Normalize the invitation code (trim whitespace and ensure lowercase)
+        invitation_code = invitation_code.strip()
+        
         invitation = CompanyInvitation.query.filter_by(invitation_code=invitation_code).first()
         
         if not invitation:

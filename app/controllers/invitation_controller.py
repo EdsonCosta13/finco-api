@@ -55,15 +55,21 @@ class InvitationController:
         
         # Validate invitation based on type
         invitation_type = data['type'].lower()
+        invitation_code = data.get('invitation_code', '').strip()
+        
         if invitation_type == 'company':
-            valid, result = InvitationService.validate_company_invitation(data['invitation_code'])
+            valid, result = InvitationService.validate_company_invitation(invitation_code)
         elif invitation_type == 'employee':
-            valid, result = InvitationService.validate_employee_invitation(data['invitation_code'])
+            valid, result = InvitationService.validate_employee_invitation(invitation_code)
         else:
             return jsonify({"error": "Invalid invitation type (must be 'company' or 'employee')"}), 400
         
         if not valid:
-            return jsonify({"error": result}), 400
+            return jsonify({
+                "valid": False,
+                "error": result,
+                "message": "Código de convite inválido ou expirado"
+            }), 400
         
         # Return the invitation details
         return jsonify({

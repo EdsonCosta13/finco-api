@@ -1,5 +1,6 @@
 from flask import jsonify, request
 from app.services.company_service import CompanyService
+from app.services.invitation_service import InvitationService
 
 class CompanyController:
     @staticmethod
@@ -34,9 +35,22 @@ class CompanyController:
             if field not in manager_data:
                 return jsonify({"error": f"Missing required manager field: {field}"}), 400
         
+        # Validate the invitation code before creating the company
+        invitation_code = data['invitation_code']
+        valid, result = InvitationService.validate_company_invitation(invitation_code)
+        
+        if not valid:
+            return jsonify({"message": "Código de convite inválido ou expirado"}), 400
+            
+        # Include the validated invitation in the data
+        data['invitation'] = result
+        
         company, error = CompanyService.create_company(data)
         if error:
             return jsonify({"error": error}), 400
+        
+        # Mark invitation as used only after successful company creation
+        InvitationService.mark_company_invitation_used(result)
         
         return jsonify(company.to_dict()), 201
     

@@ -11,7 +11,7 @@ class CompanyInvitation(db.Model):
     __tablename__ = 'company_invitations'
     
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(100), nullable=False)  # Removed unique constraint
+    email = db.Column(db.String(100), nullable=False) 
     invitation_code = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     is_used = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(20), default=InvitationStatus.PENDING)
