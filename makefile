@@ -1,8 +1,11 @@
 c-env:
 	python3 -m venv .venv
 
-active:
+active-linux:
 	. .venv/bin/activate
+
+active-windows:
+	.venv\Scripts\activate
 
 install:
 	pip3 install -r requirements.txt
