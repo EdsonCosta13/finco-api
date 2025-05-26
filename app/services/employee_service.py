@@ -1,6 +1,7 @@
 from app import db
 from app.models.employee import Employee
 from app.models.company import Company
+from app.models.invitation import EmployeeInvitation, InvitationStatus
 from app.services.invitation_service import InvitationService
 from sqlalchemy.exc import IntegrityError
 
@@ -51,7 +52,8 @@ class EmployeeService:
             db.session.add(employee)
             
             # Mark invitation as used
-            InvitationService.mark_employee_invitation_used(invitation_or_error)
+            invitation_or_error.is_used = True
+            invitation_or_error.status = InvitationStatus.USED
             
             db.session.commit()
             return employee, None
@@ -98,3 +100,53 @@ class EmployeeService:
         db.session.delete(employee)
         db.session.commit()
         return True, None
+
+    @staticmethod
+    def register_employee(data):
+        """
+        Register a new employee from an invitation code
+        """
+        # Validate invitation code
+        if 'invitation_code' not in data:
+            return None, "Invitation code is required"
+        
+        valid, invitation_or_error = InvitationService.validate_employee_invitation(data['invitation_code'])
+        if not valid:
+            return None, invitation_or_error
+        
+        # Verify email matches invitation
+        if invitation_or_error.email.lower() != data.get('email', '').lower():
+            return None, "Email does not match the invitation"
+        
+        # Set company_id from the invitation
+        company_id = invitation_or_error.company_id
+        
+        try:
+            employee = Employee(
+                name=data.get('name'),
+                email=data.get('email'),
+                cpf=data.get('cpf'),
+                position=data.get('position'),
+                salary=data.get('salary'),
+                phone=data.get('phone'),
+                company_id=company_id
+            )
+            
+            if 'password' in data:
+                employee.password = data['password']
+            
+            db.session.add(employee)
+            
+            # Mark invitation as used
+            invitation_or_error.is_used = True
+            invitation_or_error.status = InvitationStatus.USED
+            
+            db.session.commit()
+            return employee, None
+        except IntegrityError as e:
+            db.session.rollback()
+            if 'cpf' in str(e.orig).lower():
+                return None, "CPF already exists"
+            elif 'email' in str(e.orig).lower():
+                return None, "Email already exists"
+            return None, str(e)

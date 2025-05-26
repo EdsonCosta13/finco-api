@@ -1,6 +1,7 @@
 from flask import jsonify, request
 from app.services.employee_service import EmployeeService
 from app.services.invitation_service import InvitationService
+from app.models.invitation import InvitationStatus
 
 class EmployeeController:
     @staticmethod
@@ -103,3 +104,34 @@ class EmployeeController:
             return jsonify({"error": error}), 404
         
         return jsonify({"message": "Employee deleted successfully"}), 200
+    
+    @staticmethod
+    def register_employee():
+        data = request.get_json()
+        
+        # Basic validation
+        required_fields = ['name', 'email', 'cpf', 'position', 'salary', 'phone', 'password', 'invitation_code']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Validate invitation code
+        valid, invitation_or_error = InvitationService.validate_employee_invitation(data['invitation_code'])
+        if not valid:
+            return jsonify({"error": invitation_or_error}), 400
+        
+        # Verify email matches invitation
+        if invitation_or_error.email.lower().strip() != data['email'].lower().strip():
+            return jsonify({"error": "O email não corresponde ao convite"}), 400
+        
+        employee, error = EmployeeService.register_employee(data)
+        if error:
+            return jsonify({"error": error}), 400
+        
+        # Mark invitation as used
+        invitation_or_error.status = InvitationStatus.USED
+        
+        return jsonify({
+            "message": "Funcionário registrado com sucesso",
+            "employee": employee.to_dict()
+        }), 201

@@ -22,3 +22,6 @@ employee_bp.route('/<int:employee_id>/investments', methods=['POST'])(Investment
 # Employee's credit requests
 employee_bp.route('/<int:employee_id>/credits', methods=['GET'])(CreditController.get_credit_requests_by_employee)
 employee_bp.route('/<int:employee_id>/credits', methods=['POST'])(CreditController.create_credit_request)
+
+# Employee registration
+employee_bp.route('/register', methods=['POST'])(EmployeeController.register_employee)

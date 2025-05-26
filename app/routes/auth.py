@@ -6,6 +6,10 @@ from app.models.company import Company
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta
 import datetime
+from sqlalchemy.exc import IntegrityError
+from app.services.invitation_service import InvitationService
+from app.models.employee import Employee
+from app.models.invitation import InvitationStatus
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -133,55 +137,77 @@ def employee_signup():
     data = request.get_json()
     
     # Validate required fields
-    required_fields = ['name', 'email', 'password', 'invitation_code']
+    required_fields = ['name', 'email', 'password', 'invitation_code', 'cpf', 'position', 'salary', 'phone']
     for field in required_fields:
         if field not in data:
             return jsonify({'message': f'O campo {field} é obrigatório'}), 400
     
     # Verify invitation code
-    invitation = EmployeeInvitation.query.filter_by(
-        invitation_code=data['invitation_code'],
-        email=data['email'],
-        is_used=False
-    ).first()
-    
-    if not invitation:
-        return jsonify({'message': 'Código de convite inválido ou expirado'}), 400
+    valid, invitation_or_error = InvitationService.validate_employee_invitation(data['invitation_code'])
+    if not valid:
+        return jsonify({'message': invitation_or_error}), 400
         
-    if invitation.expires_at < datetime.datetime.utcnow():
+    # Verify email matches invitation
+    if invitation_or_error.email.lower() != data['email'].lower():
+        return jsonify({'message': 'O email não corresponde ao convite'}), 400
+    
+    if invitation_or_error.expires_at < datetime.datetime.utcnow():
         return jsonify({'message': 'Código de convite expirado'}), 400
     
-    # Create employee user
-    user = User(
-        name=data['name'],
-        email=data['email'],
-        password=data['password'],
-        role=invitation.role,  # 'employee' or 'manager'
-        company_id=invitation.company_id,
-        is_admin=False
-    )
-    
     try:
+        # Create user record for authentication
+        user = User(
+            name=data['name'],
+            email=data['email'],
+            password=data['password'],
+            role=invitation_or_error.role,  # 'employee' or 'manager'
+            company_id=invitation_or_error.company_id,
+            is_admin=False
+        )
         db.session.add(user)
+        db.session.flush()  # Get user ID without committing
+        
+        # Create employee record with detailed information
+        employee = Employee(
+            name=data['name'],
+            email=data['email'],
+            cpf=data['cpf'],
+            position=data['position'],
+            salary=float(data['salary']),
+            phone=data['phone'],
+            company_id=invitation_or_error.company_id
+        )
+        employee.password = data['password']  # This uses the password setter in the model
+        db.session.add(employee)
         
         # Update invitation status
-        invitation.is_used = True
-        invitation.user_id = user.id
+        invitation_or_error.is_used = True
+        invitation_or_error.status = InvitationStatus.USED
+        invitation_or_error.user_id = user.id
         
         db.session.commit()
         
         # Generate token
         access_token = create_access_token(
-            identity={'user_id': user.id, 'role': user.role, 'company_id': user.company_id},
+            identity={'user_id': user.id, 'employee_id': employee.id, 'role': user.role, 'company_id': user.company_id},
             expires_delta=timedelta(hours=24)
         )
         
         return jsonify({
             'message': 'Registro realizado com sucesso',
             'access_token': access_token,
-            'user': user.to_dict()
+            'user': user.to_dict(),
+            'employee': employee.to_dict()
         }), 201
         
+    except IntegrityError as e:
+        db.session.rollback()
+        error_message = str(e)
+        if 'cpf' in error_message.lower():
+            return jsonify({'message': 'Este CPF já está registrado'}), 400
+        if 'email' in error_message.lower():
+            return jsonify({'message': 'Este email já está registrado'}), 400
+        return jsonify({'message': f'Erro ao registrar: {error_message}'}), 500
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Erro ao registrar: {str(e)}'}), 500
