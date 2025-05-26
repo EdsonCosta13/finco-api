@@ -1,0 +1,166 @@
+from flask import Blueprint, request, jsonify
+from app import db
+from app.models.user import User
+from app.models.invitation import CompanyInvitation, EmployeeInvitation
+from app.models.company import Company
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from datetime import timedelta
+import datetime
+
+auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({'message': 'Email e senha são obrigatórios'}), 400
+        
+    user = User.query.filter_by(email=data['email']).first()
+    
+    if not user or not user.check_password(data['password']):
+        return jsonify({'message': 'Email ou senha inválidos'}), 401
+        
+    if not user.is_active:
+        return jsonify({'message': 'Conta desativada. Entre em contato com o administrador.'}), 401
+    
+    # Generate token
+    access_token = create_access_token(
+        identity={'user_id': user.id, 'role': user.role, 'company_id': user.company_id},
+        expires_delta=timedelta(hours=24)
+    )
+    
+    return jsonify({
+        'message': 'Login realizado com sucesso',
+        'access_token': access_token,
+        'user': user.to_dict()
+    }), 200
+
+@auth_bp.route('/signup/company', methods=['POST'])
+def company_signup():
+    data = request.get_json()
+    
+    # Validate required fields
+    required_fields = ['name', 'email', 'password', 'cnpj', 'invitation_code']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'message': f'O campo {field} é obrigatório'}), 400
+    
+    # Verify invitation code
+    invitation = CompanyInvitation.query.filter_by(
+        invitation_code=data['invitation_code'],
+        email=data['email'],
+        status='pending'
+    ).first()
+    
+    if not invitation:
+        return jsonify({'message': 'Código de convite inválido ou expirado'}), 400
+        
+    if invitation.expires_at < datetime.datetime.utcnow():
+        return jsonify({'message': 'Código de convite expirado'}), 400
+    
+    # Create company
+    company = Company(
+        name=data['name'],
+        cnpj=data['cnpj'],
+        email=data['email'],
+        address=data.get('address', ''),
+        phone=data.get('phone', '')
+    )
+    
+    # Create manager user
+    user = User(
+        name=data.get('user_name', data['name']),
+        email=data['email'],
+        password=data['password'],
+        role='manager',
+        is_admin=False
+    )
+    
+    try:
+        db.session.add(company)
+        db.session.flush()  # Get company ID without committing
+        
+        user.company_id = company.id
+        db.session.add(user)
+        
+        # Update invitation status
+        invitation.status = 'accepted'
+        invitation.company_id = company.id
+        
+        db.session.commit()
+        
+        # Generate token
+        access_token = create_access_token(
+            identity={'user_id': user.id, 'role': user.role, 'company_id': user.company_id},
+            expires_delta=timedelta(hours=24)
+        )
+        
+        return jsonify({
+            'message': 'Registro realizado com sucesso',
+            'access_token': access_token,
+            'user': user.to_dict(),
+            'company': company.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Erro ao registrar: {str(e)}'}), 500
+
+@auth_bp.route('/signup/employee', methods=['POST'])
+def employee_signup():
+    data = request.get_json()
+    
+    # Validate required fields
+    required_fields = ['name', 'email', 'password', 'invitation_code']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'message': f'O campo {field} é obrigatório'}), 400
+    
+    # Verify invitation code
+    invitation = EmployeeInvitation.query.filter_by(
+        invitation_code=data['invitation_code'],
+        email=data['email'],
+        status='pending'
+    ).first()
+    
+    if not invitation:
+        return jsonify({'message': 'Código de convite inválido ou expirado'}), 400
+        
+    if invitation.expires_at < datetime.datetime.utcnow():
+        return jsonify({'message': 'Código de convite expirado'}), 400
+    
+    # Create employee user
+    user = User(
+        name=data['name'],
+        email=data['email'],
+        password=data['password'],
+        role=invitation.role,  # 'employee' or 'manager'
+        company_id=invitation.company_id,
+        is_admin=False
+    )
+    
+    try:
+        db.session.add(user)
+        
+        # Update invitation status
+        invitation.status = 'accepted'
+        invitation.user_id = user.id
+        
+        db.session.commit()
+        
+        # Generate token
+        access_token = create_access_token(
+            identity={'user_id': user.id, 'role': user.role, 'company_id': user.company_id},
+            expires_delta=timedelta(hours=24)
+        )
+        
+        return jsonify({
+            'message': 'Registro realizado com sucesso',
+            'access_token': access_token,
+            'user': user.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Erro ao registrar: {str(e)}'}), 500
