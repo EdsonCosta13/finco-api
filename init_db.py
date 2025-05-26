@@ -1,20 +1,13 @@
 import os
 import subprocess
 from app import create_app, db
-from flask_migrate import Migrate
-
-app = create_app()
-migrate = Migrate(app, db)
 
 def init_database():
     """Initialize the database with all tables from models."""
+    app = create_app()
     with app.app_context():
-        # Import all models to ensure they're registered with SQLAlchemy
-        from app.models.company import Company
-        from app.models.employee import Employee
-        from app.models.credit_request import CreditRequest
-        from app.models.investment import Investment
-        from app.models.invitation import CompanyInvitation, EmployeeInvitation
+        # Drop all tables to reset everything
+        db.drop_all()
         
         # Check if migrations directory already exists
         migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
