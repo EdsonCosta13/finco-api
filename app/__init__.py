@@ -28,6 +28,7 @@ def create_app(config_name='default'):
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp
     from app.routes.users import users_bp
+    from app.routes.manager_routes import manager_bp
     
     app.register_blueprint(company_bp, url_prefix='/companies')
     app.register_blueprint(employee_bp, url_prefix='/employees')
@@ -37,5 +38,6 @@ def create_app(config_name='default'):
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(users_bp, url_prefix='/api/users')
+    app.register_blueprint(manager_bp, url_prefix='/api/manager')
     
     return app

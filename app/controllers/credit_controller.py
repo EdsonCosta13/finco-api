@@ -80,10 +80,28 @@ class CreditController:
         return jsonify(credit_request.to_dict()), 201
     
     @staticmethod
-    def update_credit_status(credit_id, status):
+    def update_credit_status(credit_id, status=None):
         """Atualiza o status de uma solicitação de crédito"""
         try:
-            result = CreditService.update_credit_request_status(credit_id, status)
+            # Se o status não for fornecido, tenta obter do corpo da requisição
+            if status is None:
+                data = request.get_json()
+                if not data or 'status' not in data:
+                    return jsonify({'message': 'Status não fornecido'}), 400
+                status = data['status']
+            
+            # Valida o status
+            valid_statuses = ['approved', 'rejected']
+            if status not in valid_statuses:
+                return jsonify({'message': f'Status inválido. Deve ser um dos seguintes: {", ".join(valid_statuses)}'}), 400
+            
+            jwt = get_jwt()
+            company_id = jwt.get('company_id')
+            
+            if not company_id:
+                return jsonify({'message': 'ID da empresa não encontrado no token'}), 401
+            
+            result = CreditService.update_credit_request_status(credit_id, status, company_id)
             
             if isinstance(result, tuple):
                 return jsonify({'message': result[1]}), 400
@@ -126,24 +144,26 @@ class CreditController:
 
     @staticmethod
     def get_pending_credit_requests():
-        """Lista todas as solicitações de crédito pendentes"""
+        """Lista todas as solicitações de crédito pendentes da empresa do gerente"""
         try:
-            # Buscar todas as solicitações
-            all_requests = CreditService.get_all_credit_requests()
-            logging.info(f"Total de solicitações encontradas: {len(all_requests)}")
+            jwt = get_jwt()
+            company_id = jwt.get('company_id')
             
-            # Filtrar apenas as pendentes
-            pending_requests = [req for req in all_requests if req.status == CreditRequestStatus.PENDING]
-            logging.info(f"Solicitações pendentes: {len(pending_requests)}")
+            if not company_id:
+                return jsonify({'message': 'ID da empresa não encontrado no token'}), 401
+            
+            # Buscar solicitações pendentes da empresa
+            requests = CreditService.get_pending_credit_requests_by_company(company_id)
+            logging.info(f"Solicitações pendentes encontradas para a empresa {company_id}: {len(requests)}")
             
             # Converter para dicionário
-            requests_dict = [req.to_dict() for req in pending_requests]
+            requests_dict = [req.to_dict() for req in requests]
             logging.info(f"Dados das solicitações: {requests_dict}")
             
             return jsonify({
                 'message': 'Solicitações pendentes encontradas',
                 'credit_requests': requests_dict,
-                'total': len(pending_requests)
+                'total': len(requests)
             }), 200
             
         except Exception as e:

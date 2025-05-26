@@ -48,6 +48,20 @@ class CreditService:
             raise
     
     @staticmethod
+    def get_pending_credit_requests_by_company(company_id):
+        """Retorna todas as solicitações de crédito pendentes de uma empresa"""
+        try:
+            requests = CreditRequest.query.join(Employee).filter(
+                Employee.company_id == company_id,
+                CreditRequest.status == CreditRequestStatus.PENDING
+            ).all()
+            logging.info(f"Buscando solicitações pendentes da empresa {company_id}. Total encontrado: {len(requests)}")
+            return requests
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações da empresa: {str(e)}")
+            raise
+
+    @staticmethod
     def create_employee_credit_request(employee_id, amount, term_months, purpose):
         try:
             # Verificar se o funcionário existe
@@ -154,10 +168,16 @@ class CreditService:
             return None, str(e)
     
     @staticmethod
-    def update_credit_request_status(credit_id, status):
+    def update_credit_request_status(credit_id, status, company_id=None):
         credit_request = CreditRequest.query.get(credit_id)
         if not credit_request:
             return None, "Credit request not found"
+        
+        # Validate manager permissions if company_id is provided
+        if company_id is not None:
+            employee = Employee.query.get(credit_request.employee_id)
+            if not employee or employee.company_id != company_id:
+                return None, "Você não tem permissão para gerenciar esta solicitação de crédito"
         
         # Validate status transition
         if credit_request.status == CreditRequestStatus.COMPLETED:
