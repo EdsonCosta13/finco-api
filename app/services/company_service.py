@@ -32,8 +32,14 @@ class CompanyService:
         company_email = data.get('email', '').lower().strip()
         manager_email = manager_data.get('email', '').lower().strip()
         
-        if invitation_email != company_email and invitation_email != manager_email:
-            return None, "O email não corresponde ao convite"
+        # Debug information
+        print(f"Invitation email: {invitation_email}")
+        print(f"Company email: {company_email}")
+        print(f"Manager email: {manager_email}")
+        
+        # Check if either company or manager email matches the invitation email
+        if invitation_email not in [company_email, manager_email]:
+            return None, f"O email não corresponde ao convite. Email do convite: {invitation_email}"
         
         try:
             # Create manager user first

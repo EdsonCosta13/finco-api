@@ -47,7 +47,11 @@ class CompanyController:
         
         company, error = CompanyService.create_company(data)
         if error:
-            return jsonify({"error": error}), 400
+            if "nif already exists" in error.lower():
+                return jsonify({"message": "Este NIF já está registrado no sistema"}), 400
+            elif "email already exists" in error.lower():
+                return jsonify({"message": "Este email já está registrado no sistema"}), 400
+            return jsonify({"message": f"Erro ao registrar: {error}"}), 400
         
         # Mark invitation as used only after successful company creation
         InvitationService.mark_company_invitation_used(result)
