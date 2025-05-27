@@ -89,4 +89,36 @@ class AuthController:
                 'status': 'error',
                 'statusCode': 500,
                 'message': f'Erro ao verificar funcionário: {str(e)}'
+            }), 500
+
+    @staticmethod
+    def get_current_user():
+        try:
+            current_user = get_jwt_identity()
+            # Handle both string and dictionary identity formats
+            user_id = current_user['user_id'] if isinstance(current_user, dict) else current_user
+            user = User.query.get(user_id)
+            
+            if not user:
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 404,
+                    'message': 'Usuário não encontrado'
+                }), 404
+            
+            return jsonify({
+                'status': 'success',
+                'statusCode': 200,
+                'message': 'Dados do usuário recuperados com sucesso',
+                'data': {
+                    'user': user.to_dict()
+                }
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Erro ao recuperar dados do usuário: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao recuperar dados do usuário: {str(e)}'
             }), 500 

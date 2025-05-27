@@ -18,6 +18,13 @@ auth_bp = Blueprint('auth', __name__)
 # Endpoints de autenticação geral
 auth_bp.route('/login', methods=['POST'])(AuthController.login)
 
+# Endpoint para obter dados do usuário atual
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    """Retorna os dados do usuário autenticado"""
+    return AuthController.get_current_user()
+
 # Endpoints de verificação
 @auth_bp.route('/employee/verify', methods=['GET'])
 @jwt_required()
