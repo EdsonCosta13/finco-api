@@ -5,6 +5,7 @@ from app.models.credit_request import CreditRequest, CreditRequestStatus
 from app.services.credit_service import CreditService
 from app.models.user import User
 from datetime import datetime
+import logging
 
 class InvestmentService:
     # Minimum investment amount
@@ -60,13 +61,13 @@ class InvestmentService:
             raise Exception(f'Erro ao buscar oportunidades: {str(e)}')
     
     @staticmethod
-    def create_investment(investor_id, credit_request_id, amount):
+    def create_investment(employee_id, credit_request_id, amount):
         """Cria um novo investimento"""
         try:
-            # Verificar se o investidor existe
-            investor = User.query.get(investor_id)
-            if not investor:
-                return 'Investidor não encontrado', 404
+            # Verificar se o funcionário existe
+            employee = Employee.query.get(employee_id)
+            if not employee:
+                return 'Funcionário não encontrado', 404
             
             # Verificar se a solicitação de crédito existe e está aprovada
             credit_request = CreditRequest.query.get(credit_request_id)
@@ -76,20 +77,24 @@ class InvestmentService:
             if credit_request.status != CreditRequestStatus.APPROVED:
                 return 'A solicitação de crédito não está disponível para investimento', 400
             
+            # Verificar se o funcionário não está tentando investir em sua própria solicitação
+            if credit_request.employee_id == employee_id:
+                return 'Não é possível investir em sua própria solicitação de crédito', 400
+            
             # Calcular quanto já foi investido
             invested_amount = sum(inv.amount for inv in credit_request.investments)
             remaining_amount = credit_request.amount - invested_amount
             
             # Validar o valor do investimento
-            if amount <= 0:
-                return 'O valor do investimento deve ser maior que zero', 400
+            if amount < InvestmentService.MIN_INVESTMENT_AMOUNT:
+                return f'O valor mínimo para investimento é R$ {InvestmentService.MIN_INVESTMENT_AMOUNT:.2f}', 400
             
             if amount > remaining_amount:
                 return f'O valor máximo disponível para investimento é R$ {remaining_amount:.2f}', 400
             
             # Criar o investimento
             investment = Investment(
-                investor_id=investor_id,
+                employee_id=employee_id,
                 credit_request_id=credit_request_id,
                 amount=amount,
                 created_at=datetime.utcnow()
@@ -104,8 +109,10 @@ class InvestmentService:
                 credit_request.status = CreditRequestStatus.FUNDED
                 db.session.commit()
             
+            logging.info(f"Novo investimento criado: ID={investment.id}, Valor={amount}, Funcionário={employee_id}, Solicitação={credit_request_id}")
             return investment.to_dict()
             
         except Exception as e:
             db.session.rollback()
+            logging.error(f"Erro ao criar investimento: {str(e)}")
             return f'Erro ao criar investimento: {str(e)}', 500

@@ -2,6 +2,7 @@ from flask import jsonify, request
 from app.services.investment_service import InvestmentService
 from app.models.credit_request import CreditRequestStatus
 from flask_jwt_extended import get_jwt
+import logging
 
 class InvestmentController:
     @staticmethod
@@ -38,6 +39,7 @@ class InvestmentController:
             }), 200
             
         except Exception as e:
+            logging.error(f"Erro ao buscar oportunidades: {str(e)}")
             return jsonify({'message': f'Erro ao buscar oportunidades: {str(e)}'}), 500
     
     @staticmethod
@@ -55,14 +57,14 @@ class InvestmentController:
                 if field not in data:
                     return jsonify({'message': f'O campo {field} é obrigatório'}), 400
             
-            # Get investor_id from JWT claims
-            investor_id = jwt.get('user_id')
-            if not investor_id:
-                return jsonify({'message': 'ID do investidor não encontrado no token'}), 401
+            # Get employee_id from JWT claims
+            employee_id = jwt.get('employee_id')
+            if not employee_id:
+                return jsonify({'message': 'ID do funcionário não encontrado no token'}), 401
             
             # Create investment
             result = InvestmentService.create_investment(
-                investor_id=investor_id,
+                employee_id=employee_id,
                 credit_request_id=data['credit_request_id'],
                 amount=float(data['amount'])
             )
@@ -78,4 +80,5 @@ class InvestmentController:
         except ValueError as e:
             return jsonify({'message': str(e)}), 400
         except Exception as e:
+            logging.error(f"Erro ao realizar investimento: {str(e)}")
             return jsonify({'message': f'Erro ao realizar investimento: {str(e)}'}), 500
