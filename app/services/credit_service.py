@@ -48,17 +48,38 @@ class CreditService:
             raise
     
     @staticmethod
+    def get_credit_requests_by_company_and_status(company_id, status=None):
+        """Retorna todas as solicitações de crédito de uma empresa, opcionalmente filtradas por status"""
+        try:
+            # Sempre filtra pela empresa do manager
+            query = CreditRequest.query.join(Employee).filter(Employee.company_id == company_id)
+            
+            if status:
+                query = query.filter(CreditRequest.status == status)
+            
+            # Ordena por data de criação, mais recentes primeiro
+            query = query.order_by(CreditRequest.created_at.desc())
+            
+            requests = query.all()
+            logging.info(f"Buscando solicitações da empresa {company_id} com status {status}. Total encontrado: {len(requests)}")
+            return requests
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações da empresa: {str(e)}")
+            raise
+
+    @staticmethod
     def get_pending_credit_requests_by_company(company_id):
         """Retorna todas as solicitações de crédito pendentes de uma empresa"""
         try:
             requests = CreditRequest.query.join(Employee).filter(
                 Employee.company_id == company_id,
                 CreditRequest.status == CreditRequestStatus.PENDING
-            ).all()
+            ).order_by(CreditRequest.created_at.desc()).all()
+            
             logging.info(f"Buscando solicitações pendentes da empresa {company_id}. Total encontrado: {len(requests)}")
             return requests
         except Exception as e:
-            logging.error(f"Erro ao buscar solicitações da empresa: {str(e)}")
+            logging.error(f"Erro ao buscar solicitações pendentes da empresa: {str(e)}")
             raise
 
     @staticmethod
@@ -167,17 +188,17 @@ class CreditService:
             return None, str(e)
     
     @staticmethod
-    def update_credit_request_status(credit_id, status, company_id=None):
+    def update_credit_request_status(credit_id, status, company_id):
+        """Atualiza o status de uma solicitação de crédito"""
         try:
             credit_request = CreditRequest.query.get(credit_id)
             if not credit_request:
                 return None, "Solicitação de crédito não encontrada"
             
-            # Validate manager permissions if company_id is provided
-            if company_id is not None:
-                employee = Employee.query.get(credit_request.employee_id)
-                if not employee or employee.company_id != company_id:
-                    return None, "Você não tem permissão para gerenciar esta solicitação de crédito"
+            # Verifica se a solicitação pertence à empresa do manager
+            employee = Employee.query.get(credit_request.employee_id)
+            if not employee or employee.company_id != company_id:
+                return None, "Você não tem permissão para gerenciar esta solicitação de crédito"
             
             # Validate status transition
             if credit_request.status == CreditRequestStatus.COMPLETED:

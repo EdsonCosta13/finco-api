@@ -170,3 +170,38 @@ class CreditController:
         except Exception as e:
             logging.error(f"Erro ao buscar solicitações: {str(e)}")
             return jsonify({'message': f'Erro ao buscar solicitações: {str(e)}'}), 500
+
+    @staticmethod
+    def get_company_credit_requests():
+        """Lista todas as solicitações de crédito da empresa do gerente, opcionalmente filtradas por status"""
+        try:
+            jwt = get_jwt()
+            company_id = jwt.get('company_id')
+            
+            if not company_id:
+                return jsonify({'message': 'ID da empresa não encontrado no token'}), 401
+            
+            # Obter status do query parameter, se fornecido
+            status = request.args.get('status')
+            
+            # Validar status se fornecido
+            if status and status not in ['pending', 'approved', 'rejected']:
+                return jsonify({'message': 'Status inválido. Deve ser um dos seguintes: pending, approved, rejected'}), 400
+            
+            # Buscar solicitações da empresa
+            requests = CreditService.get_credit_requests_by_company_and_status(company_id, status)
+            logging.info(f"Solicitações encontradas para a empresa {company_id}: {len(requests)}")
+            
+            # Converter para dicionário
+            requests_dict = [req.to_dict() for req in requests]
+            
+            return jsonify({
+                'message': 'Solicitações encontradas',
+                'credit_requests': requests_dict,
+                'total': len(requests),
+                'status_filter': status
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações: {str(e)}")
+            return jsonify({'message': f'Erro ao buscar solicitações: {str(e)}'}), 500
