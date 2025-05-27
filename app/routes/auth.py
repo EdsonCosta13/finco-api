@@ -123,11 +123,11 @@ def manager_login():
     if not company:
         return jsonify({'message': 'Dados da empresa não encontrados'}), 404
     
-    # Generate token
+    # Generate token with user ID as identity and role in claims
     access_token = create_access_token(
-        identity={
-            'user_id': user.id,
-            'role': user.role,
+        identity=str(user.id),  # Convert to string to ensure it's a string
+        additional_claims={
+            'role': 'manager',
             'company_id': user.company_id
         },
         expires_delta=timedelta(hours=24)

@@ -102,8 +102,7 @@ class CreditService:
                 term_months=term_months,
                 purpose=purpose,
                 interest_rate=base_rate,
-                status=CreditRequestStatus.PENDING,
-                created_at=datetime.utcnow()
+                status=CreditRequestStatus.PENDING
             )
 
             db.session.add(credit_request)
@@ -169,27 +168,35 @@ class CreditService:
     
     @staticmethod
     def update_credit_request_status(credit_id, status, company_id=None):
-        credit_request = CreditRequest.query.get(credit_id)
-        if not credit_request:
-            return None, "Credit request not found"
-        
-        # Validate manager permissions if company_id is provided
-        if company_id is not None:
-            employee = Employee.query.get(credit_request.employee_id)
-            if not employee or employee.company_id != company_id:
-                return None, "Você não tem permissão para gerenciar esta solicitação de crédito"
-        
-        # Validate status transition
-        if credit_request.status == CreditRequestStatus.COMPLETED:
-            return None, "Cannot change status of completed credit request"
-        
-        if credit_request.status == CreditRequestStatus.REJECTED and status != CreditRequestStatus.CANCELLED:
-            return None, "Rejected credit requests can only be cancelled"
-        
-        # Apply status update
-        credit_request.status = status
-        db.session.commit()
-        return credit_request, None
+        try:
+            credit_request = CreditRequest.query.get(credit_id)
+            if not credit_request:
+                return None, "Solicitação de crédito não encontrada"
+            
+            # Validate manager permissions if company_id is provided
+            if company_id is not None:
+                employee = Employee.query.get(credit_request.employee_id)
+                if not employee or employee.company_id != company_id:
+                    return None, "Você não tem permissão para gerenciar esta solicitação de crédito"
+            
+            # Validate status transition
+            if credit_request.status == CreditRequestStatus.COMPLETED:
+                return None, "Não é possível alterar o status de uma solicitação de crédito concluída"
+            
+            if credit_request.status == CreditRequestStatus.REJECTED and status != CreditRequestStatus.CANCELLED:
+                return None, "Solicitações rejeitadas só podem ser canceladas"
+            
+            # Apply status update
+            credit_request.status = status
+            db.session.commit()
+            
+            logging.info(f"Status da solicitação {credit_id} atualizado para {status}")
+            return credit_request, None
+            
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Erro ao atualizar status da solicitação {credit_id}: {str(e)}")
+            return None, f"Erro ao atualizar status: {str(e)}"
     
     @staticmethod
     def get_funded_amount(credit_id):

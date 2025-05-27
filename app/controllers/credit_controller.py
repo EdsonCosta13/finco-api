@@ -101,10 +101,10 @@ class CreditController:
             if not company_id:
                 return jsonify({'message': 'ID da empresa não encontrado no token'}), 401
             
-            result = CreditService.update_credit_request_status(credit_id, status, company_id)
+            result, error = CreditService.update_credit_request_status(credit_id, status, company_id)
             
-            if isinstance(result, tuple):
-                return jsonify({'message': result[1]}), 400
+            if error:
+                return jsonify({'message': error}), 400
                 
             return jsonify({
                 'message': f'Solicitação de crédito {status} com sucesso',
@@ -112,6 +112,7 @@ class CreditController:
             }), 200
             
         except Exception as e:
+            logging.error(f"Erro ao atualizar status: {str(e)}")
             return jsonify({'message': f'Erro ao atualizar status: {str(e)}'}), 500
 
     @staticmethod
