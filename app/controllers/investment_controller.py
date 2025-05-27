@@ -7,40 +7,105 @@ import logging
 class InvestmentController:
     @staticmethod
     def get_all_investments():
-        investments = InvestmentService.get_all_investments()
-        return jsonify([investment.to_dict() for investment in investments]), 200
+        try:
+            investments = InvestmentService.get_all_investments()
+            return jsonify({
+                'status': 'success',
+                'statusCode': 200,
+                'message': 'Investimentos encontrados',
+                'data': [investment.to_dict() for investment in investments],
+                'total': len(investments)
+            }), 200
+        except Exception as e:
+            logging.error(f"Erro ao buscar investimentos: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao buscar investimentos: {str(e)}'
+            }), 500
     
     @staticmethod
     def get_investments_by_employee(employee_id):
-        investments = InvestmentService.get_investments_by_employee(employee_id)
-        return jsonify([investment.to_dict() for investment in investments]), 200
+        try:
+            investments = InvestmentService.get_investments_by_employee(employee_id)
+            return jsonify({
+                'status': 'success',
+                'statusCode': 200,
+                'message': 'Investimentos do funcionário encontrados',
+                'data': [investment.to_dict() for investment in investments],
+                'total': len(investments)
+            }), 200
+        except Exception as e:
+            logging.error(f"Erro ao buscar investimentos do funcionário: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao buscar investimentos: {str(e)}'
+            }), 500
     
     @staticmethod
     def get_investments_by_credit(credit_id):
-        investments = InvestmentService.get_investments_by_credit(credit_id)
-        return jsonify([investment.to_dict() for investment in investments]), 200
+        try:
+            investments = InvestmentService.get_investments_by_credit(credit_id)
+            return jsonify({
+                'status': 'success',
+                'statusCode': 200,
+                'message': 'Investimentos da solicitação encontrados',
+                'data': [investment.to_dict() for investment in investments],
+                'total': len(investments)
+            }), 200
+        except Exception as e:
+            logging.error(f"Erro ao buscar investimentos da solicitação: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao buscar investimentos: {str(e)}'
+            }), 500
     
     @staticmethod
     def get_investment_by_id(investment_id):
-        investment = InvestmentService.get_investment_by_id(investment_id)
-        if not investment:
-            return jsonify({"error": "Investment not found"}), 404
-        return jsonify(investment.to_dict()), 200
+        try:
+            investment = InvestmentService.get_investment_by_id(investment_id)
+            if not investment:
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 404,
+                    'message': 'Investimento não encontrado'
+                }), 404
+            return jsonify({
+                'status': 'success',
+                'statusCode': 200,
+                'message': 'Investimento encontrado',
+                'data': investment.to_dict()
+            }), 200
+        except Exception as e:
+            logging.error(f"Erro ao buscar investimento: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao buscar investimento: {str(e)}'
+            }), 500
     
     @staticmethod
     def list_investment_opportunities():
         try:
-            # Get all pending credit requests that are available for investment
             opportunities = InvestmentService.get_available_opportunities()
             
             return jsonify({
+                'status': 'success',
+                'statusCode': 200,
                 'message': 'Oportunidades de investimento encontradas',
-                'opportunities': opportunities
+                'data': opportunities,
+                'total': len(opportunities)
             }), 200
             
         except Exception as e:
             logging.error(f"Erro ao buscar oportunidades: {str(e)}")
-            return jsonify({'message': f'Erro ao buscar oportunidades: {str(e)}'}), 500
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao buscar oportunidades: {str(e)}'
+            }), 500
     
     @staticmethod
     def create_investment():
@@ -49,18 +114,30 @@ class InvestmentController:
             jwt = get_jwt()
             
             if not data:
-                return jsonify({'message': 'Dados não fornecidos'}), 400
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 400,
+                    'message': 'Dados não fornecidos'
+                }), 400
             
             # Validate required fields
             required_fields = ['credit_request_id', 'amount']
             for field in required_fields:
                 if field not in data:
-                    return jsonify({'message': f'O campo {field} é obrigatório'}), 400
+                    return jsonify({
+                        'status': 'error',
+                        'statusCode': 400,
+                        'message': f'O campo {field} é obrigatório'
+                    }), 400
             
             # Get employee_id from JWT claims
             employee_id = jwt.get('employee_id')
             if not employee_id:
-                return jsonify({'message': 'ID do funcionário não encontrado no token'}), 401
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 401,
+                    'message': 'ID do funcionário não encontrado no token'
+                }), 401
             
             # Create investment
             result = InvestmentService.create_investment(
@@ -70,15 +147,29 @@ class InvestmentController:
             )
             
             if isinstance(result, tuple):
-                return jsonify({'message': result[0]}), result[1]
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': result[1],
+                    'message': result[0]
+                }), result[1]
             
             return jsonify({
+                'status': 'success',
+                'statusCode': 201,
                 'message': 'Investimento realizado com sucesso',
-                'investment': result
+                'data': result
             }), 201
             
         except ValueError as e:
-            return jsonify({'message': str(e)}), 400
+            return jsonify({
+                'status': 'error',
+                'statusCode': 400,
+                'message': str(e)
+            }), 400
         except Exception as e:
             logging.error(f"Erro ao realizar investimento: {str(e)}")
-            return jsonify({'message': f'Erro ao realizar investimento: {str(e)}'}), 500
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao realizar investimento: {str(e)}'
+            }), 500

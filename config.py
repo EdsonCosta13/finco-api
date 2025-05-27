@@ -7,9 +7,9 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_for_development')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt_dev_key_for_development')
     JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour in seconds
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///finco.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    DEBUG = os.environ.get('FLASK_ENV') == 'development'
+    DEBUG = True
     
     # Email configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
