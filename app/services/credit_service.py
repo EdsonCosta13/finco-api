@@ -235,3 +235,41 @@ class CreditService:
             db.session.commit()
             return True
         return False
+
+    @staticmethod
+    def get_available_credit_requests():
+        """Retorna todas as solicitações de crédito aprovadas disponíveis para investimento"""
+        try:
+            # Busca solicitações aprovadas que ainda não foram totalmente financiadas
+            requests = CreditRequest.query.filter(
+                CreditRequest.status == CreditRequestStatus.APPROVED
+            ).order_by(CreditRequest.created_at.desc()).all()
+            
+            result = []
+            for request in requests:
+                # Calcula quanto já foi investido
+                invested_amount = sum(investment.amount for investment in request.investments)
+                remaining_amount = request.amount - invested_amount
+                
+                # Só inclui se ainda houver valor disponível para investimento
+                if remaining_amount > 0:
+                    result.append({
+                        'id': request.id,
+                        'amount': request.amount,
+                        'remaining_amount': remaining_amount,
+                        'interest_rate': request.interest_rate,
+                        'term_months': request.term_months,
+                        'purpose': request.purpose,
+                        'employee_name': request.employee.name,
+                        'company_name': request.employee.company.name,
+                        'created_at': request.created_at.isoformat(),
+                        'invested_amount': invested_amount,
+                        'investment_percentage': (invested_amount / request.amount) * 100
+                    })
+            
+            logging.info(f"Buscando solicitações disponíveis para investimento. Total encontrado: {len(result)}")
+            return result
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações disponíveis: {str(e)}")
+            raise

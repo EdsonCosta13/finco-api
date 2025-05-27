@@ -205,3 +205,19 @@ class CreditController:
         except Exception as e:
             logging.error(f"Erro ao buscar solicitações: {str(e)}")
             return jsonify({'message': f'Erro ao buscar solicitações: {str(e)}'}), 500
+
+    @staticmethod
+    def get_available_credit_requests():
+        """Lista todas as solicitações de crédito aprovadas disponíveis para investimento"""
+        try:
+            requests = CreditService.get_available_credit_requests()
+            
+            return jsonify({
+                'message': 'Solicitações disponíveis para investimento encontradas',
+                'credit_requests': requests,
+                'total': len(requests)
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar solicitações disponíveis: {str(e)}")
+            return jsonify({'message': f'Erro ao buscar solicitações disponíveis: {str(e)}'}), 500
