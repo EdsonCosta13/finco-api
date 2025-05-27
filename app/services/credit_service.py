@@ -101,9 +101,9 @@ class CreditService:
 
             # Validar valores mínimos e máximos
             if amount < 1000:
-                return 'O valor mínimo para solicitação é de R$ 1.000,00', 400
+                return 'O valor mínimo para solicitação é de Kzs 1.000,00', 400
             if amount > 50000:
-                return 'O valor máximo para solicitação é de R$ 50.000,00', 400
+                return 'O valor máximo para solicitação é de Kzs 50.000,00', 400
             if term_months < 3:
                 return 'O prazo mínimo é de 3 meses', 400
             if term_months > 60:
@@ -112,7 +112,7 @@ class CreditService:
             # Calcular taxa de juros base
             base_rate = 0.015  # 1.5% ao mês
             if amount > 25000:
-                base_rate -= 0.002  # Redução de 0.2% para valores acima de R$ 25.000
+                base_rate -= 0.002  # Redução de 0.2% para valores acima de Kzs 25.000
             if term_months > 24:
                 base_rate += 0.001  # Aumento de 0.1% para prazos acima de 24 meses
 

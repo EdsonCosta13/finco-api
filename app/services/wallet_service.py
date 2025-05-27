@@ -37,7 +37,7 @@ class WalletService:
                 wallet_id=wallet.id,
                 type=TransactionType.DEPOSIT,
                 amount=amount,
-                description=f"Depósito de R$ {amount:.2f}"
+                description=f"Depósito de Kzs {amount:.2f}"
             )
             db.session.add(transaction)
             db.session.commit()
@@ -62,7 +62,7 @@ class WalletService:
                 wallet_id=wallet.id,
                 type=TransactionType.WITHDRAWAL,
                 amount=amount,
-                description=f"Saque de R$ {amount:.2f}"
+                description=f"Saque de Kzs {amount:.2f}"
             )
             db.session.add(transaction)
             db.session.commit()

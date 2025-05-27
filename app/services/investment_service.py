@@ -87,10 +87,10 @@ class InvestmentService:
             
             # Validar o valor do investimento
             if amount < InvestmentService.MIN_INVESTMENT_AMOUNT:
-                return f'O valor mínimo para investimento é R$ {InvestmentService.MIN_INVESTMENT_AMOUNT:.2f}', 400
+                return f'O valor mínimo para investimento é Kzs {InvestmentService.MIN_INVESTMENT_AMOUNT:.2f}', 400
             
             if amount > remaining_amount:
-                return f'O valor máximo disponível para investimento é R$ {remaining_amount:.2f}', 400
+                return f'O valor máximo disponível para investimento é Kzs {remaining_amount:.2f}', 400
             
             # Criar o investimento
             investment = Investment(
