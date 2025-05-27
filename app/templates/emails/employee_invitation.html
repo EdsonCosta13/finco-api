@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Finco Employee Registration</title>
+    <title>Finco - Convite para Funcionário</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -46,27 +46,34 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Finco Employee Registration Invitation</h1>
+            <h1>Finco - Convite para Funcionário</h1>
         </div>
         <div class="content">
-            <p>Dear colleague,</p>
+            <p>Prezado(a) colaborador(a),</p>
             
-            <p>You have been invited to join your company on the Finco platform. Please use the invitation code below to complete your registration:</p>
+            <p>Você foi convidado(a) para se juntar à sua empresa na plataforma Finco. Por favor, utilize o código de convite abaixo para completar seu cadastro:</p>
             
             <div class="invitation-code">
                 {{ invitation.invitation_code }}
             </div>
             
-            <p>This invitation code will expire on: {{ invitation.expires_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            <p>Este código de convite expirará em: {{ invitation.expires_at.strftime('%d/%m/%Y às %H:%M') }}</p>
             
-            <p>To register, please visit our <a href="https://finco.com/register/employee">registration page</a> and enter this code when prompted.</p>
+            <p>Para realizar seu cadastro, acesse nossa <a href="https://localhost:3000/register/employee/{{ invitation.invitation_code }}">página de registro</a> e insira este código quando solicitado.</p>
             
-            <p>If you have any questions, please contact your company administrator.</p>
+            <p>Após o cadastro, você terá acesso a todos os recursos da plataforma, incluindo:</p>
+            <ul>
+                <li>Gerenciamento de sua carteira de investimentos</li>
+                <li>Acompanhamento de solicitações de crédito</li>
+                <li>Visualização de relatórios e extratos</li>
+            </ul>
             
-            <p>Best regards,<br>The Finco Team</p>
+            <p>Se você tiver alguma dúvida, entre em contato com o administrador da sua empresa ou com nossa equipe de suporte.</p>
+            
+            <p>Atenciosamente,<br>Equipe Finco</p>
         </div>
         <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>Esta é uma mensagem automática. Por favor, não responda a este email.</p>
         </div>
     </div>
 </body>
