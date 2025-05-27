@@ -30,11 +30,11 @@ def create_app(config_name='default'):
     from app.routes.users import users_bp
     from app.routes.manager_routes import manager_bp
     
-    app.register_blueprint(company_bp, url_prefix='/companies')
-    app.register_blueprint(employee_bp, url_prefix='/employees')
-    app.register_blueprint(credit_bp, url_prefix='/api/credit')
+    app.register_blueprint(company_bp, url_prefix='/api/companies')
+    app.register_blueprint(employee_bp, url_prefix='/api/employees')
+    app.register_blueprint(credit_bp, url_prefix='/api/credits')
     app.register_blueprint(investment_bp, url_prefix='/api/investment')
-    app.register_blueprint(invitation_bp, url_prefix='/invitations')
+    app.register_blueprint(invitation_bp, url_prefix='/api/invitations')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(users_bp, url_prefix='/api/users')

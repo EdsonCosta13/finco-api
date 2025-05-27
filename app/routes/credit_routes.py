@@ -10,9 +10,6 @@ credit_bp.route('/', methods=['GET'])(CreditController.get_all_credit_requests)
 credit_bp.route('/<int:credit_id>', methods=['GET'])(CreditController.get_credit_request_by_id)
 credit_bp.route('/', methods=['POST'])(CreditController.create_credit_request)
 
-# Credit status update
-credit_bp.route('/<int:credit_id>/status', methods=['PUT'])(CreditController.update_credit_status)
-
 # Employee credit request routes
 @credit_bp.route('/employee/requests', methods=['GET'])
 @jwt_required()
@@ -49,3 +46,11 @@ def get_pending_requests():
 def get_company_credit_requests():
     """Lista todas as solicitações de crédito da empresa do gerente"""
     return CreditController.get_company_credit_requests()
+
+# Credit status update
+@credit_bp.route('/<int:credit_id>/status', methods=['PUT'])
+@jwt_required()
+@User.manager_required
+def update_credit_status(credit_id):
+    """Atualiza o status de uma solicitação de crédito"""
+    return CreditController.update_credit_status(credit_id)
