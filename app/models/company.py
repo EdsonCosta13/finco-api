@@ -15,7 +15,7 @@ class Company(db.Model):
     
     # Relationships
     employees = db.relationship('Employee', backref=db.backref('company', lazy=True), lazy=True, cascade="all, delete-orphan")
-    manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    manager_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     manager = db.relationship('User', foreign_keys=[manager_id], backref='managed_companies')
     
     def to_dict(self):

@@ -10,20 +10,16 @@ class InvitationController:
             data = request.get_json()
             
             # Basic validation
-            required_fields = ['email', 'company_name', 'nif']
-            for field in required_fields:
-                if field not in data:
-                    return jsonify({
-                        'status': 'error',
-                        'statusCode': 400,
-                        'message': f'Campo obrigatório não fornecido: {field}'
-                    }), 400
+            if 'email' not in data:
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 400,
+                    'message': 'Campo obrigatório não fornecido: email'
+                }), 400
             
             # Create invitation
             invitation, error = InvitationService.create_company_invitation(
-                email=data['email'],
-                company_name=data['company_name'],
-                nif=data['nif']
+                email=data['email']
             )
             
             if error:
@@ -39,8 +35,6 @@ class InvitationController:
                 'message': 'Convite para empresa criado com sucesso',
                 'data': {
                     'email': invitation.email,
-                    'company_name': invitation.company_name,
-                    'nif': invitation.nif,
                     'expires_at': invitation.expires_at.isoformat()
                 }
             }), 201

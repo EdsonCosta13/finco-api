@@ -29,15 +29,17 @@ def create_app(config_class=Config):
     from app.routes.admin import admin_bp
     from app.routes.users import users_bp
     from app.routes.manager_routes import manager_bp
+    from app.routes.wallet_routes import wallet_bp
     
     app.register_blueprint(company_bp, url_prefix='/api/companies')
     app.register_blueprint(employee_bp, url_prefix='/api/employees')
     app.register_blueprint(credit_bp, url_prefix='/api/credits')
     app.register_blueprint(investment_bp, url_prefix='/api/investment')
-    app.register_blueprint(invitation_bp, url_prefix='/api/invitations')
+    app.register_blueprint(invitation_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(admin_bp, url_prefix='/api')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(manager_bp, url_prefix='/api/manager')
+    app.register_blueprint(wallet_bp, url_prefix='/api')
     
     return app
