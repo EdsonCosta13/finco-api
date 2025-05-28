@@ -80,7 +80,7 @@ class CreditController:
                     'message': 'Dados não fornecidos'
                 }), 400
                 
-            # Get employee_id from JWT claims
+            # Get employee_id from JWT claims token
             employee_id = jwt.get('employee_id')
             if not employee_id:
                 return jsonify({
