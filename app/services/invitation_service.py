@@ -4,6 +4,7 @@ from app.utils.email import send_invitation_email
 from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 import uuid
+import logging
 
 class InvitationService:
     # Default expiration period for invitations (in days)
@@ -147,3 +148,27 @@ class InvitationService:
         invitation.is_used = True
         invitation.status = InvitationStatus.USED
         db.session.commit()
+
+    @staticmethod
+    def get_company_invitations(company_id, status=None):
+        """Retorna todos os convites da empresa, opcionalmente filtrados por status"""
+        try:
+            query = EmployeeInvitation.query.filter_by(company_id=company_id)
+            
+            # Apply status filter if provided
+            if status:
+                if status == 'pending':
+                    query = query.filter_by(is_used=False).filter(EmployeeInvitation.expires_at > datetime.utcnow())
+                elif status == 'used':
+                    query = query.filter_by(is_used=True)
+                elif status == 'expired':
+                    query = query.filter(EmployeeInvitation.expires_at <= datetime.utcnow())
+            
+            # Order by creation date, most recent first
+            query = query.order_by(EmployeeInvitation.created_at.desc())
+            
+            return query.all()
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar convites da empresa: {str(e)}")
+            return []

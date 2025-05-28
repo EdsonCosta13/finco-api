@@ -5,6 +5,7 @@ from app.models.invitation import EmployeeInvitation
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 import uuid
+from app.controllers.user_controller import UserController
 
 users_bp = Blueprint('users', __name__)
 
@@ -207,3 +208,9 @@ def invite_employee():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Erro ao enviar convite: {str(e)}'}), 500
+
+@users_bp.route('/company/users', methods=['GET'])
+@jwt_required()
+@User.manager_required
+def get_company_users():
+    return UserController.get_company_users()

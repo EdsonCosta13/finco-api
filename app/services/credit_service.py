@@ -237,13 +237,19 @@ class CreditService:
         return False
 
     @staticmethod
-    def get_available_credit_requests():
+    def get_available_credit_requests(employee_id=None):
         """Retorna todas as solicitações de crédito aprovadas disponíveis para investimento"""
         try:
             # Busca solicitações aprovadas que ainda não foram totalmente financiadas
-            requests = CreditRequest.query.filter(
+            query = CreditRequest.query.filter(
                 CreditRequest.status == CreditRequestStatus.APPROVED
-            ).order_by(CreditRequest.created_at.desc()).all()
+            )
+            
+            # Se um employee_id for fornecido, exclui as solicitações desse funcionário
+            if employee_id:
+                query = query.filter(CreditRequest.employee_id != employee_id)
+            
+            requests = query.order_by(CreditRequest.created_at.desc()).all()
             
             result = []
             for request in requests:

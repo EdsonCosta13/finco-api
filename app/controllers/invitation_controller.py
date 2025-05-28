@@ -1,6 +1,8 @@
 from flask import jsonify, request
 from app.services.invitation_service import InvitationService
 from app.models.invitation import InvitationStatus
+from app.models.company import Company
+from flask_jwt_extended import get_jwt
 import logging
 
 class InvitationController:
@@ -140,4 +142,57 @@ class InvitationController:
                 'status': 'error',
                 'statusCode': 500,
                 'message': f'Erro ao validar convite: {str(e)}'
+            }), 500
+
+    @staticmethod
+    def get_company_invitations():
+        """Lista todos os convites da empresa do gerente"""
+        try:
+            jwt = get_jwt()
+            company_id = jwt.get('company_id')
+            role = jwt.get('role')
+            
+            if not company_id:
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 401,
+                    'message': 'ID da empresa não encontrado no token'
+                }), 401
+            
+            # Verifica se o usuário tem a role de manager
+            if role != 'manager':
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 403,
+                    'message': 'Acesso permitido apenas para gerentes'
+                }), 403
+            
+            # Get status filter from query parameters
+            status = request.args.get('status')
+            
+            # Validate status if provided
+            if status and status not in ['pending', 'used', 'expired']:
+                return jsonify({
+                    'status': 'error',
+                    'statusCode': 400,
+                    'message': 'Status inválido. Deve ser um dos seguintes: pending, used, expired'
+                }), 400
+            
+            # Get invitations
+            invitations = InvitationService.get_company_invitations(company_id, status)
+            
+            return jsonify({
+                'status': 'success',
+                'statusCode': 200,
+                'message': 'Convites encontrados com sucesso',
+                'data': [invitation.to_dict() for invitation in invitations],
+                'total': len(invitations)
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Erro ao buscar convites: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'statusCode': 500,
+                'message': f'Erro ao buscar convites: {str(e)}'
             }), 500

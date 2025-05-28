@@ -15,8 +15,15 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Enable CORS for all routes
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    # Enable CORS for all routes with more specific configuration
+    CORS(app, resources={
+        r"/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
     
     db.init_app(app)
     migrate.init_app(app, db)
@@ -39,7 +46,7 @@ def create_app(config_class=Config):
     app.register_blueprint(employee_bp, url_prefix='/api/employees')
     app.register_blueprint(credit_bp, url_prefix='/api/credits')
     app.register_blueprint(investment_bp, url_prefix='/api/investment')
-    app.register_blueprint(invitation_bp, url_prefix='/api')
+    app.register_blueprint(invitation_bp, url_prefix='/api/invitations')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api')
     app.register_blueprint(users_bp, url_prefix='/api/users')

@@ -358,7 +358,12 @@ class CreditController:
     def get_available_credit_requests():
         """Lista todas as solicitações de crédito aprovadas disponíveis para investimento"""
         try:
-            requests = CreditService.get_available_credit_requests()
+            # Obtém o ID do funcionário do token JWT
+            jwt = get_jwt()
+            employee_id = jwt.get('employee_id')
+            
+            # Busca as solicitações disponíveis, excluindo as do próprio funcionário
+            requests = CreditService.get_available_credit_requests(employee_id)
             
             return jsonify({
                 'status': 'success',
